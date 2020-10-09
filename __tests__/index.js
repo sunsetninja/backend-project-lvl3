@@ -1,5 +1,5 @@
 import {
-  describe, test, expect, beforeAll,
+  describe, test, expect, beforeAll, beforeEach,
 } from '@jest/globals';
 import os from 'os';
 import { promises as fs } from 'fs';
@@ -10,12 +10,16 @@ import loadPage from '../src/index.js';
 const getFixturePath = (filename) => path.join('__tests__', '__fixtures__', filename);
 
 let expected;
-const output = os.tmpdir();
 beforeAll(async () => {
   expected = await fs.readFile(getFixturePath('page.html'), 'utf-8');
   nock('https://ru.hexlet.io/')
     .get('/courses')
     .reply(200, expected);
+});
+
+let output;
+beforeEach(async () => {
+  output = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
 describe('Page loader test', () => {
