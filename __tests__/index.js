@@ -1,5 +1,5 @@
 import {
-  describe, test, expect, beforeAll, beforeEach,
+  describe, test, expect, beforeAll, beforeEach, afterAll,
 } from '@jest/globals';
 import os from 'os';
 import { promises as fs } from 'fs';
@@ -15,6 +15,11 @@ beforeAll(async () => {
   nock('https://ru.hexlet.io/')
     .get('/courses')
     .reply(200, expected);
+});
+
+afterAll(() => {
+  nock.cleanAll();
+  nock.enableNetConnect();
 });
 
 let output;
