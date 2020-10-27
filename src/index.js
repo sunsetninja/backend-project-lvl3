@@ -39,8 +39,11 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
         const tags = $(tagname);
 
         const tagsWithUrls = tags
-          .map((_, tag) => ({ tag, url: new URL($(tag).attr(tagsMapping[tagname]), origin) }))
-          .filter((_, { url }) => url.origin === origin)
+          .map((_, tag) => {
+            const url = $(tag).attr(tagsMapping[tagname]);
+            return ({ tag, url: url ? new URL(url, origin) : url });
+          })
+          .filter((_, { url }) => url && url.origin === origin)
           .map((_, { tag, url }) => ({ tag, url: url.toString() }))
           .get();
 
@@ -69,7 +72,6 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
                 }),
             };
           },
-
         );
       });
 
