@@ -21,6 +21,21 @@ const tagsMapping = {
   link: 'href',
 };
 
+const loadAsset = (url, outputdir) => {
+  debugLog('asset url', url);
+  return () => axios.get(url, { responseType: 'arraybuffer' })
+    .then(({ data }) => {
+      const assetsPath = getAssetsFullname(outputdir, url);
+
+      debugLog('asset output', assetsPath);
+
+      return fs.writeFile(assetsPath, data);
+    })
+    .catch(() => {
+      debugLog('asset download error', url);
+    });
+};
+
 const loadPage = (pageurl, outputdir = process.cwd()) => {
   const { origin } = new URL(pageurl);
   const htmlFilename = urlToFilename(pageurl, '.html');
@@ -35,45 +50,19 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
     .then(({ data: html }) => {
       const $ = cheerio.load(html, { decodeEntities: false });
 
-      const tasks = Object.keys(tagsMapping).flatMap((tagname) => {
-        const tags = $(tagname);
-
-        const tagsWithUrls = tags
+      const tasks = Object.keys(tagsMapping)
+        .flatMap((tagname) => $(tagname)
           .map((_, tag) => {
             const url = $(tag).attr(tagsMapping[tagname]);
-            return ({ tag, url: url ? new URL(url, origin) : url });
+            return ({ tag, url: url ? new URL(url, origin) : null });
           })
           .filter((_, { url }) => url && url.origin === origin)
           .map((_, { tag, url }) => ({ tag, url: url.toString() }))
-          .get();
-
-        tagsWithUrls.forEach(({ tag, url }) => {
-          $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
-        });
-
-        const urls = tagsWithUrls.map(({ url }) => url);
-
-        return urls.map(
-          (url) => {
-            debugLog('asset url', url);
-
-            return {
-              title: url,
-              task: () => axios.get(url, { responseType: 'arraybuffer' })
-                .then(({ data }) => {
-                  const assetsPath = getAssetsFullname(assetsOutputdir, url);
-
-                  debugLog('asset output', assetsPath);
-
-                  return fs.writeFile(assetsPath, data);
-                })
-                .catch(() => {
-                  debugLog('asset download error', url);
-                }),
-            };
-          },
-        );
-      });
+          .each((_, { tag, url }) => {
+            $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
+          })
+          .map((_, { url }) => ({ title: url, task: loadAsset(url, assetsOutputdir) }))
+          .get());
 
       return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
         .then(() => fs.access(assetsOutputdir).catch(() => { fs.mkdir(assetsOutputdir); }))
