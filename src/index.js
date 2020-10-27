@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import axios from 'axios';
 import path from 'path';
 import cheerio from 'cheerio';
+import Listr from 'listr';
 import { URL } from 'url';
 import 'axios-debug-log';
 import debug from 'debug';
@@ -34,7 +35,7 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
     .then(({ data: html }) => {
       const $ = cheerio.load(html, { decodeEntities: false });
 
-      const promises = Object.keys(tagsMapping).flatMap((tagname) => {
+      const tasks = Object.keys(tagsMapping).flatMap((tagname) => {
         const tags = $(tagname);
 
         const tagsWithUrls = tags
@@ -53,13 +54,20 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
           (url) => {
             debugLog('asset url', url);
 
-            return axios.get(url, { responseType: 'arraybuffer' }).then(({ data }) => {
-              const assetsPath = getAssetsFullname(assetsOutputdir, url);
+            return {
+              title: url,
+              task: () => axios.get(url, { responseType: 'arraybuffer' })
+                .then(({ data }) => {
+                  const assetsPath = getAssetsFullname(assetsOutputdir, url);
 
-              debugLog('asset output', assetsPath);
+                  debugLog('asset output', assetsPath);
 
-              return fs.writeFile(assetsPath, data);
-            });
+                  return fs.writeFile(assetsPath, data);
+                })
+                .catch(() => {
+                  debugLog('asset download error', url);
+                }),
+            };
           },
 
         );
@@ -67,7 +75,10 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
 
       return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
         .then(() => fs.access(assetsOutputdir).catch(() => { fs.mkdir(assetsOutputdir); }))
-        .then(() => Promise.all(promises));
+        .then(() => {
+          const listr = new Listr(tasks, { concurrent: true });
+          return listr.run();
+        });
     });
 };
 
