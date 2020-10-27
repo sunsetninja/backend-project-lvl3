@@ -9,13 +9,12 @@ import loadPage from '../src/index.js';
 
 const getFixturePath = (filename) => path.join('__tests__', '__fixtures__', filename);
 
-let responseHtml;
 let expectedHtml;
 let expectedImage;
 let expectedCss;
 let expectedJs;
 beforeAll(async () => {
-  responseHtml = await fs.readFile(getFixturePath('page.html'), 'utf-8');
+  nock.disableNetConnect();
   expectedHtml = await fs.readFile(getFixturePath('expected.html'), 'utf-8');
   expectedImage = await fs.readFile(getFixturePath('nodejs.png'));
   expectedCss = await fs.readFile(getFixturePath('application.css'));
@@ -27,7 +26,9 @@ afterAll(() => {
 });
 
 let output;
+let assetsOutput;
 beforeEach(async () => {
+  const responseHtml = await fs.readFile(getFixturePath('page.html'), 'utf-8');
   nock('https://ru.hexlet.io/')
     .persist()
     .get('/courses')
@@ -46,6 +47,7 @@ beforeEach(async () => {
     .replyWithFile(200, getFixturePath('nodejs.png'));
 
   output = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
+  assetsOutput = path.join(output, 'ru-hexlet-io-courses_files');
 });
 
 afterEach(() => {
@@ -62,9 +64,9 @@ describe('Page loader test', () => {
 
   test('should save static files correctly', async () => {
     await loadPage('https://ru.hexlet.io/courses', output);
-    const image = await fs.readFile(path.join(output, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-professions-nodejs.png'));
-    const css = await fs.readFile(path.join(output, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-assets-application.css'));
-    const js = await fs.readFile(path.join(output, 'ru-hexlet-io-courses_files', 'ru-hexlet-io-packs-js-runtime.js'));
+    const image = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-assets-professions-nodejs.png'));
+    const css = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-assets-application.css'));
+    const js = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-packs-js-runtime.js'));
 
     expect(image).toEqual(expectedImage);
     expect(css).toEqual(expectedCss);
