@@ -78,6 +78,8 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
         .then(() => {
           const listr = new Listr(tasks, { concurrent: true });
           return listr.run();
+        }).then(() => {
+          console.log(`Loaded into ${outputdir}`);
         });
     });
 };
