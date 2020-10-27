@@ -5,7 +5,7 @@ install-ci:
 lint:
 	npx eslint .
 test:
-	npm test
+	DEBUG=axios,page-loader npm test
 test-coverage:
 	npm test -- --coverage --coverageProvider=v8
 setup:

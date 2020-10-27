@@ -4,6 +4,9 @@ import path from 'path';
 import cheerio from 'cheerio';
 import { URL } from 'url';
 import 'axios-debug-log';
+import debug from 'debug';
+
+const debugLog = debug('page-loader');
 
 const urlToDirname = (url) => `${url.replace(/^http?s:\/\//, '').replace(/[^\w]/g, '-')}`;
 
@@ -17,45 +20,55 @@ const tagsMapping = {
   link: 'href',
 };
 
-const loadPage = (pageurl, outputdir = process.cwd()) => axios.get(pageurl)
-  .then(({ data: html }) => {
-    const $ = cheerio.load(html, { decodeEntities: false });
+const loadPage = (pageurl, outputdir = process.cwd()) => {
+  const { origin } = new URL(pageurl);
+  const htmlFilename = urlToFilename(pageurl, '.html');
+  const assetsDirname = `${urlToDirname(pageurl)}_files`;
+  const assetsOutputdir = path.join(outputdir, assetsDirname);
 
-    const { origin } = new URL(pageurl);
-    const htmlFilename = urlToFilename(pageurl, '.html');
-    const assetsDirname = `${urlToDirname(pageurl)}_files`;
+  debugLog('page url', pageurl);
+  debugLog('output dir', outputdir);
+  debugLog('output assets dir', assetsOutputdir);
 
-    const promises = Object.keys(tagsMapping).flatMap((tagname) => {
-      const tags = $(tagname);
+  return axios.get(pageurl)
+    .then(({ data: html }) => {
+      const $ = cheerio.load(html, { decodeEntities: false });
 
-      const tagsWithUrls = tags
-        .map((_, tag) => ({ tag, url: new URL($(tag).attr(tagsMapping[tagname]), origin) }))
-        .filter((_, { url }) => url.origin === origin)
-        .map((_, { tag, url }) => ({ tag, url: url.toString() }))
-        .get();
+      const promises = Object.keys(tagsMapping).flatMap((tagname) => {
+        const tags = $(tagname);
 
-      tagsWithUrls.forEach(({ tag, url }) => {
-        $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
+        const tagsWithUrls = tags
+          .map((_, tag) => ({ tag, url: new URL($(tag).attr(tagsMapping[tagname]), origin) }))
+          .filter((_, { url }) => url.origin === origin)
+          .map((_, { tag, url }) => ({ tag, url: url.toString() }))
+          .get();
+
+        tagsWithUrls.forEach(({ tag, url }) => {
+          $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
+        });
+
+        const urls = tagsWithUrls.map(({ url }) => url);
+
+        return urls.map(
+          (url) => {
+            debugLog('asset url', url);
+
+            return axios.get(url, { responseType: 'arraybuffer' }).then(({ data }) => {
+              const assetsPath = getAssetsFullname(assetsOutputdir, url);
+
+              debugLog('asset output', assetsPath);
+
+              return fs.writeFile(assetsPath, data);
+            });
+          },
+
+        );
       });
 
-      const urls = tagsWithUrls.map(({ url }) => url);
-
-      return urls.map(
-        (url) => axios.get(url, { responseType: 'arraybuffer' })
-          .then(({ data }) => {
-            const assetsPath = path.join(outputdir, getAssetsFullname(assetsDirname, url));
-
-            return fs.writeFile(assetsPath, data);
-          }),
-      );
+      return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
+        .then(() => fs.access(assetsOutputdir).catch(() => { fs.mkdir(assetsOutputdir); }))
+        .then(() => Promise.all(promises));
     });
-
-    return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
-      .then(() => {
-        const fullAssetsPath = path.join(outputdir, assetsDirname);
-        return fs.access(fullAssetsPath).catch(() => { fs.mkdir(fullAssetsPath); });
-      })
-      .then(() => Promise.all(promises));
-  });
+};
 
 export default loadPage;
