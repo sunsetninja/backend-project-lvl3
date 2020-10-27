@@ -30,3 +30,17 @@ To see a list of commands that PageLoader offers, you can run:
 ```sh
   page-loader --output output-folder https://example.org
 ```
+
+### Running examples
+
+#### Success saving
+
+[![asciicast](https://asciinema.org/a/z0MIbCJGx1Xj2R3CJWAl1bfUf.svg)](https://asciinema.org/a/z0MIbCJGx1Xj2R3CJWAl1bfUf)
+
+#### Saving with debug
+
+[![asciicast](https://asciinema.org/a/XsHL5SyNL1Mdw5083X4ST0Kto.svg)](https://asciinema.org/a/XsHL5SyNL1Mdw5083X4ST0Kto)
+
+#### Handling errors
+
+[![asciicast](https://asciinema.org/a/2amvGEQocTW0tYr0jJp3PcCql.svg)](https://asciinema.org/a/2amvGEQocTW0tYr0jJp3PcCql)
