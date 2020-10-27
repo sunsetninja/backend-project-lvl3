@@ -51,25 +51,28 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
       const $ = cheerio.load(html, { decodeEntities: false });
 
       const tasks = Object.keys(tagsMapping)
-        .flatMap((tagname) => $(tagname)
-          .map((_, tag) => {
-            const url = $(tag).attr(tagsMapping[tagname]);
-            return ({ tag, url: url ? new URL(url, origin) : null });
-          })
-          .filter((_, { url }) => url && url.origin === origin)
-          .map((_, { tag, url }) => ({ tag, url: url.toString() }))
-          .each((_, { tag, url }) => {
-            $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
-          })
-          .map((_, { url }) => ({ title: url, task: loadAsset(url, assetsOutputdir) }))
-          .get());
+        .flatMap(
+          (tagname) => $(tagname)
+            .map((_, tag) => {
+              const url = $(tag).attr(tagsMapping[tagname]);
+              return ({ tag, url: url ? new URL(url, origin) : null });
+            })
+            .filter((_, { url }) => url && url.origin === origin)
+            .map((_, { tag, url }) => ({ tag, url: url.toString() }))
+            .each((_, { tag, url }) => {
+              $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
+            })
+            .map((_, { url }) => ({ title: url, task: loadAsset(url, assetsOutputdir) }))
+            .get(),
+        );
 
       return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
         .then(() => fs.access(assetsOutputdir).catch(() => { fs.mkdir(assetsOutputdir); }))
         .then(() => {
           const listr = new Listr(tasks, { concurrent: true });
           return listr.run();
-        }).then(() => {
+        })
+        .then(() => {
           console.log(`Loaded into ${outputdir}`);
         });
     });
