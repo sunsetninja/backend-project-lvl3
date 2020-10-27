@@ -21,6 +21,14 @@ const tagsMapping = {
   link: 'href',
 };
 
+const getTagsWithUrls = (tags, tagname, origin) => tags
+  .map((_, tag) => {
+    const url = tag.attribs[tagsMapping[tagname]];
+    return ({ tag, url: url ? new URL(url, origin) : null });
+  })
+  .filter((_, { url }) => url && url.origin === origin)
+  .map((_, { tag, url }) => ({ tag, url: url.toString() }));
+
 const loadAsset = (url, outputdir) => {
   debugLog('asset url', url);
   return () => axios.get(url, { responseType: 'arraybuffer' })
@@ -52,13 +60,7 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
 
       const tasks = Object.keys(tagsMapping)
         .flatMap(
-          (tagname) => $(tagname)
-            .map((_, tag) => {
-              const url = $(tag).attr(tagsMapping[tagname]);
-              return ({ tag, url: url ? new URL(url, origin) : null });
-            })
-            .filter((_, { url }) => url && url.origin === origin)
-            .map((_, { tag, url }) => ({ tag, url: url.toString() }))
+          (tagname) => getTagsWithUrls($(tagname), tagname, origin)
             .each((_, { tag, url }) => {
               $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
             })
