@@ -34,14 +34,24 @@ const pageurl = new URL('/courses', origin).toString();
 
 describe('saving data', () => {
   let expectedHtml;
-  let expectedImage;
-  let expectedCss;
-  let expectedJs;
+  const assets = [
+    ['image', {
+      name: 'ru-hexlet-io-assets-professions-nodejs.png',
+      expected: getFixturePath('nodejs.png'),
+    }],
+    ['css', {
+      type: 'css',
+      name: 'ru-hexlet-io-assets-application.css',
+      expected: getFixturePath('application.css'),
+    }],
+    ['js', {
+      name: 'ru-hexlet-io-packs-js-runtime.js',
+      expected: getFixturePath('runtime.js'),
+    }],
+  ];
+
   beforeAll(async () => {
     expectedHtml = await fs.readFile(getFixturePath('expected.html'), 'utf-8');
-    expectedImage = await fs.readFile(getFixturePath('nodejs.png'));
-    expectedCss = await fs.readFile(getFixturePath('application.css'));
-    expectedJs = await fs.readFile(getFixturePath('runtime.js'));
   });
 
   beforeEach(async () => {
@@ -64,22 +74,19 @@ describe('saving data', () => {
       .replyWithFile(200, getFixturePath('nodejs.png'));
   });
 
-  test('should save page correctly', async () => {
+  test('should save html correctly', async () => {
     await loadPage(pageurl, output);
     const result = await fs.readFile(path.join(output, 'ru-hexlet-io-courses.html'), 'utf-8');
 
     expect(result).toEqual(expectedHtml);
   });
 
-  test('should save static files correctly', async () => {
+  test.each(assets)('should save %s asset correctly', async (_, asset) => {
     await loadPage(pageurl, output);
-    const image = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-assets-professions-nodejs.png'));
-    const css = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-assets-application.css'));
-    const js = await fs.readFile(path.join(assetsOutput, 'ru-hexlet-io-packs-js-runtime.js'));
+    const expected = await fs.readFile(asset.expected);
+    const result = await fs.readFile(path.join(assetsOutput, asset.name));
 
-    expect(image).toEqual(expectedImage);
-    expect(css).toEqual(expectedCss);
-    expect(js).toEqual(expectedJs);
+    expect(result).toEqual(expected);
   });
 });
 
