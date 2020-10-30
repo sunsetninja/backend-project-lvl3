@@ -5,6 +5,8 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/3440da4b2317a6db2228/maintainability)](https://codeclimate.com/github/sunsetninja/backend-project-lvl3/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/3440da4b2317a6db2228/test_coverage)](https://codeclimate.com/github/sunsetninja/backend-project-lvl3/test_coverage)
 
+A program for downloading web pages. Downloads html page with its assets in setted output direcotry. Creates files directory for assets.
+
 ## Installation
 
 ```sh
