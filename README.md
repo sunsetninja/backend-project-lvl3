@@ -1,7 +1,7 @@
 # Page loader
 
-![Node CI](https://github.com/sunsetninja/backend-project-lvl3/workflows/Node%20CI/badge.svg)
-![hexlet-check](https://github.com/sunsetninja/backend-project-lvl3/workflows/hexlet-check/badge.svg)
+[![Node CI](https://github.com/sunsetninja/backend-project-lvl3/workflows/Node%20CI/badge.svg)](https://github.com/sunsetninja/backend-project-lvl3/actions?query=workflow%3A%22Node+CI%22)
+[![hexlet-check](https://github.com/sunsetninja/backend-project-lvl3/workflows/hexlet-check/badge.svg)](https://github.com/sunsetninja/backend-project-lvl3/actions?query=workflow%3Ahexlet-check)
 [![Maintainability](https://api.codeclimate.com/v1/badges/3440da4b2317a6db2228/maintainability)](https://codeclimate.com/github/sunsetninja/backend-project-lvl3/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/3440da4b2317a6db2228/test_coverage)](https://codeclimate.com/github/sunsetninja/backend-project-lvl3/test_coverage)
 
