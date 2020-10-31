@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import commander from 'commander';
-import loadPage from '../src/index.js';
+import loadPage from '../index.js';
 
 const program = new commander.Command();
 

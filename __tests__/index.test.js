@@ -6,7 +6,7 @@ import { promises as fs, existsSync } from 'fs';
 import { URL } from 'url';
 import path from 'path';
 import nock from 'nock';
-import loadPage from '../src/index.js';
+import loadPage from '../index.js';
 
 const getFixturePath = (filename) => path.join('__tests__', '__fixtures__', filename);
 
