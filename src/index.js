@@ -72,9 +72,10 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
   const htmlFilename = urlToFilename(pageurl);
   const assetsDirname = urlToDirname(pageurl, '_files');
   const assetsOutputdir = path.join(outputdir, assetsDirname);
+  const htmlPath = path.join(outputdir, htmlFilename);
 
   debugLog('page url', pageurl);
-  debugLog('htmlFilename', htmlFilename);
+  debugLog('htmlPath', htmlPath);
   debugLog('output dir', outputdir);
   debugLog('output assets dir', assetsOutputdir);
 
@@ -86,11 +87,10 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
 
       html = result.html;
       assets = result.assets;
+
+      return fs.access(assetsOutputdir).catch(() => fs.mkdir(assetsOutputdir));
     })
-    .then(() => fs.writeFile(path.join(outputdir, htmlFilename), html))
-    .then(() => fs.access(assetsOutputdir).catch(() => {
-      fs.mkdir(assetsOutputdir);
-    }))
+    .then(() => fs.writeFile(htmlPath, html))
     .then(() => {
       const listr = new Listr(
         assets
@@ -102,7 +102,7 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
       );
       return listr.run();
     })
-    .then(() => outputdir);
+    .then(() => htmlPath);
 };
 
 export default loadPage;
