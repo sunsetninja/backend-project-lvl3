@@ -22,7 +22,7 @@ const urlToFilename = (url) => {
   return urlToDirname(url, ext || '.html');
 };
 
-const getAssets = (data, origin, assetsDirname) => {
+const processData = (data, origin, assetsDirname) => {
   const $ = cheerio.load(data, { decodeEntities: false });
 
   const tagsMapping = {
@@ -31,12 +31,13 @@ const getAssets = (data, origin, assetsDirname) => {
     link: 'href',
   };
 
-  const assets = Object.keys(tagsMapping)
+  const assetsUrls = Object.keys(tagsMapping)
     .flatMap((tagname) => $(tagname)
-      .filter((_, tag) => $(tag).attr(tagsMapping[tagname]))
+      .map((_, tag) => $(tag))
+      .filter((_, tag) => tag.attr(tagsMapping[tagname]))
       .map((_, tag) => ({
-        tag: $(tag),
-        url: new URL($(tag).attr(tagsMapping[tagname]), origin),
+        tag,
+        url: new URL(tag.attr(tagsMapping[tagname]), origin),
       }))
       .filter((_, { url }) => url.origin === origin)
       .each((_, { tag, url }) => {
@@ -45,10 +46,10 @@ const getAssets = (data, origin, assetsDirname) => {
           path.join(assetsDirname, urlToFilename(url)),
         );
       })
-      .map((_, { tag, url }) => ({ tag, url: url.toString() }))
+      .map((_, { url }) => url.toString())
       .get());
 
-  return { html: $.root().html(), assets };
+  return { html: $.root().html(), assetsUrls };
 };
 
 const loadAsset = (url, outputdir) => {
@@ -80,20 +81,20 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
   debugLog('output assets dir', assetsOutputdir);
 
   let html;
-  let assets;
+  let assetsUrls;
   return axios.get(pageurl)
     .then(({ data }) => {
-      const result = getAssets(data, origin, assetsDirname);
+      const result = processData(data, origin, assetsDirname);
 
       html = result.html;
-      assets = result.assets;
+      assetsUrls = result.assetsUrls;
     })
     .then(() => fs.access(assetsOutputdir).catch(() => fs.mkdir(assetsOutputdir)))
     .then(() => fs.writeFile(htmlPath, html))
     .then(() => {
       const listr = new Listr(
-        assets
-          .map(({ url }) => ({
+        assetsUrls
+          .map((url) => ({
             title: url,
             task: loadAsset(url, assetsOutputdir),
           })),
