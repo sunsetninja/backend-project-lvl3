@@ -9,31 +9,53 @@ import debug from 'debug';
 
 const debugLog = debug('page-loader');
 
-const urlToDirname = (url) => `${url.replace(/^http?s:\/\//, '').replace(/[^\w]/g, '-')}`;
+const urlToDirname = (url, postfix = '') => {
+  const { hostname, pathname } = new URL(url);
+  const { dir, name } = path.parse(`${hostname}${pathname}`);
 
-const urlToFilename = (url, extention = '') => `${urlToDirname(url)}${extention}`;
-
-const getAssetsFullname = (dirname, url) => path.join(dirname, urlToFilename(url.replace(/\.[^/.]+$/, ''), path.extname(url) || '.html'));
-
-const tagsMapping = {
-  img: 'src',
-  script: 'src',
-  link: 'href',
+  return `${path.join(dir, name).replace(/[^\w]/g, '-')}${postfix}`;
 };
 
-const getTagsWithUrls = (tags, tagname, origin) => tags
-  .map((_, tag) => {
-    const url = tag.attribs[tagsMapping[tagname]];
-    return ({ tag, url: url ? new URL(url, origin) : null });
-  })
-  .filter((_, { url }) => url && url.origin === origin)
-  .map((_, { tag, url }) => ({ tag, url: url.toString() }));
+const urlToFilename = (url) => {
+  const { ext } = path.parse(url.toString());
+
+  return urlToDirname(url, ext || '.html');
+};
+
+const getAssets = (data, origin, assetsDirname) => {
+  const $ = cheerio.load(data, { decodeEntities: false });
+
+  const tagsMapping = {
+    img: 'src',
+    script: 'src',
+    link: 'href',
+  };
+
+  const assets = Object.keys(tagsMapping)
+    .flatMap((tagname) => $(tagname)
+      .filter((_, tag) => $(tag).attr(tagsMapping[tagname]))
+      .map((_, tag) => ({
+        tag: $(tag),
+        url: new URL($(tag).attr(tagsMapping[tagname]), origin),
+      }))
+      .filter((_, { url }) => url.origin === origin)
+      .each((_, { tag, url }) => {
+        tag.attr(
+          tagsMapping[tagname],
+          path.join(assetsDirname, urlToFilename(url)),
+        );
+      })
+      .map((_, { tag, url }) => ({ tag, url: url.toString() }))
+      .get());
+
+  return { html: $.root().html(), assets };
+};
 
 const loadAsset = (url, outputdir) => {
   debugLog('asset url', url);
   return () => axios.get(url, { responseType: 'arraybuffer' })
     .then(({ data }) => {
-      const assetsPath = getAssetsFullname(outputdir, url);
+      const assetsPath = path.join(outputdir, urlToFilename(url));
 
       debugLog('asset output', assetsPath);
 
@@ -46,38 +68,41 @@ const loadAsset = (url, outputdir) => {
 
 const loadPage = (pageurl, outputdir = process.cwd()) => {
   const { origin } = new URL(pageurl);
-  const htmlFilename = urlToFilename(pageurl, '.html');
-  const assetsDirname = `${urlToDirname(pageurl)}_files`;
+
+  const htmlFilename = urlToFilename(pageurl);
+  const assetsDirname = urlToDirname(pageurl, '_files');
   const assetsOutputdir = path.join(outputdir, assetsDirname);
 
   debugLog('page url', pageurl);
+  debugLog('htmlFilename', htmlFilename);
   debugLog('output dir', outputdir);
   debugLog('output assets dir', assetsOutputdir);
 
+  let html;
+  let assets;
   return axios.get(pageurl)
-    .then(({ data: html }) => {
-      const $ = cheerio.load(html, { decodeEntities: false });
+    .then(({ data }) => {
+      const result = getAssets(data, origin, assetsDirname);
 
-      const tasks = Object.keys(tagsMapping)
-        .flatMap(
-          (tagname) => getTagsWithUrls($(tagname), tagname, origin)
-            .each((_, { tag, url }) => {
-              $(tag).attr(tagsMapping[tagname], getAssetsFullname(assetsDirname, url));
-            })
-            .map((_, { url }) => ({ title: url, task: loadAsset(url, assetsOutputdir) }))
-            .get(),
-        );
-
-      return fs.writeFile(path.join(outputdir, htmlFilename), $.root().html())
-        .then(() => fs.access(assetsOutputdir).catch(() => { fs.mkdir(assetsOutputdir); }))
-        .then(() => {
-          const listr = new Listr(tasks, { concurrent: true });
-          return listr.run();
-        })
-        .then(() => {
-          console.log(`Loaded into ${outputdir}`);
-        });
-    });
+      html = result.html;
+      assets = result.assets;
+    })
+    .then(() => fs.writeFile(path.join(outputdir, htmlFilename), html))
+    .then(() => fs.access(assetsOutputdir).catch(() => {
+      fs.mkdir(assetsOutputdir);
+    }))
+    .then(() => {
+      const listr = new Listr(
+        assets
+          .map(({ url }) => ({
+            title: url,
+            task: loadAsset(url, assetsOutputdir),
+          })),
+        { concurrent: true },
+      );
+      return listr.run();
+    })
+    .then(() => outputdir);
 };
 
 export default loadPage;
