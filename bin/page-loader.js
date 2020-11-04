@@ -12,7 +12,7 @@ program
   .helpOption('-h, --help', 'output usage information')
   .option('--output', 'output directory')
   .action((pageurl, options) => {
-    console.log(loadPage(pageurl, options.output));
+    loadPage(pageurl, options.output).then(console.log);
   });
 
 program.parse(process.argv);
