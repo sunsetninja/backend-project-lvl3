@@ -6,7 +6,7 @@ import Listr from 'listr';
 import { URL } from 'url';
 import 'axios-debug-log';
 import debug from 'debug';
-import { urlToDirname, urlToFilename } from './utils';
+import { urlToDirname, urlToFilename } from './utils.js';
 
 const debugLog = debug('page-loader');
 
