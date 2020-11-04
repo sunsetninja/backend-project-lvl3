@@ -6,21 +6,9 @@ import Listr from 'listr';
 import { URL } from 'url';
 import 'axios-debug-log';
 import debug from 'debug';
+import { urlToDirname, urlToFilename } from './utils';
 
 const debugLog = debug('page-loader');
-
-const urlToDirname = (url, postfix = '') => {
-  const { hostname, pathname } = new URL(url);
-  const { dir, name } = path.parse(`${hostname}${pathname}`);
-
-  return `${path.join(dir, name).replace(/[^\w]/g, '-')}${postfix}`;
-};
-
-const urlToFilename = (url) => {
-  const { ext } = path.parse(url.toString());
-
-  return urlToDirname(url, ext || '.html');
-};
 
 const processData = (data, origin, assetsDirname) => {
   const $ = cheerio.load(data, { decodeEntities: false });
