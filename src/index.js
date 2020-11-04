@@ -77,7 +77,7 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
       html = result.html;
       assetsUrls = result.assetsUrls;
     })
-    .then(() => fs.access(assetsOutputdir).catch(() => fs.mkdir(assetsOutputdir)))
+    .then(() => fs.mkdir(assetsOutputdir).catch(() => fs.mkdir(assetsOutputdir)))
     .then(() => fs.writeFile(htmlPath, html))
     .then(() => {
       const listr = new Listr(
