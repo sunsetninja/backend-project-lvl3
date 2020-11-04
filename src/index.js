@@ -66,20 +66,18 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
   debugLog('page url', pageurl);
   debugLog('htmlPath', htmlPath);
   debugLog('output dir', outputdir);
-  debugLog('output assets dir', assetsOutputdir);
 
-  let html;
-  let assetsUrls;
   return axios.get(pageurl)
-    .then(({ data }) => {
-      const result = processData(data, origin, assetsDirname);
-
-      html = result.html;
-      assetsUrls = result.assetsUrls;
-    })
-    .then(() => fs.mkdir(assetsOutputdir).catch(() => fs.mkdir(assetsOutputdir)))
-    .then(() => fs.writeFile(htmlPath, html))
-    .then(() => {
+    .then(({ data }) => processData(data, origin, assetsDirname))
+    .then((result) => fs.mkdir(assetsOutputdir)
+      .catch(() => fs.mkdir(assetsOutputdir))
+      .then(() => {
+        debugLog('output assets dir', assetsOutputdir);
+        return result;
+      }))
+    .then((result) => fs.writeFile(htmlPath, result.html)
+      .then(() => result))
+    .then(({ assetsUrls }) => {
       const listr = new Listr(
         assetsUrls
           .map((url) => ({
