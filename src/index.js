@@ -69,7 +69,7 @@ const loadPage = (pageurl, outputdir = process.cwd()) => {
 
   return axios.get(pageurl)
     .then(({ data }) => processData(data, origin, assetsDirname))
-    .then((result) => fs.mkdir(assetsOutputdir)
+    .then((result) => fs.access(assetsOutputdir)
       .catch(() => fs.mkdir(assetsOutputdir))
       .then(() => {
         debugLog('output assets dir', assetsOutputdir);
